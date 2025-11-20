@@ -1,44 +1,97 @@
 #Importaciones
-import random  
+import random
+from collections import deque
 
 #Clases
+#-------------------------------------COMPONENTES DEL MAPA-------------------------------------
 class Celda:
-   def __init__(self, pasa):
-       self.pasa = True
-
+   def permite_jugador(self):
+        return False
+    
+   def permite_enemigo(self):
+        return False
+#--------------------------------#
 class Camino(Celda):
-   def verificar_paso(self):
-       return self.pasa
-        
+   def permite_jugador(self):
+        return True
+    
+   def permite_enemigo(self):
+        return True
+#--------------------------------#       
 class Lianas(Celda):
-   def verificar_paso(self, jugador):
-      if jugador.modo == "Cazador":
-         return True
-      else:
-         return False
-      
+   def permite_jugador(self):
+        return False
+    
+   def permite_enemigo(self):
+        return True
+#--------------------------------#      
 class Tuneles(Celda):
-   def verificar_paso(self, jugador):
-      if jugador.modo == "Escape":
-         return True
-      else:
-         return False
-
+   def permite_jugador(self):
+        return True
+    
+   def permite_enemigo(self):
+        return False
+#--------------------------------#
 class Muro(Celda):
-   def verificar_paso(self):
-      self.pasa = False
-      return self.pasa
-
+   def permite_jugador(self):
+        return False
+    
+   def permite_enemigo(self):
+        return False
+#----------------------------------------------------------------------------------------------
 
 class Mapa:
-   def __init__(self):
-      self.entrada = (0, 0)
-      self.salida = (0, 0)
-      self.matriz = []
+    def __init__(self, filas=10, columnas=40):
+        self.filas = filas
+        self.columnas = columnas
+        self.entrada = (0, 0)
+        self.salida = (filas-1, columnas-1)
+        self.jugador_pos = self.entrada
+        self.enemigos_pos = []
+        self.trampas = []# para modo Escapa
 
-   def crear_mapa(self, filas=15, columnas=30):
-      self.matriz = [[random.choice([Camino(True), Lianas(True), Tuneles(True), Muro(False)]) for _ in range(columnas)] for _ in range(filas)]
-      print(self.matriz) 
+    def crear_mapa(self):
+        from collections import deque
+        tipos = [Camino, Lianas, Tuneles, Muro]
+        pesos = [65, 10, 10, 15]  # 65% camino
+        while True:
+            self.matriz = [[random.choices(tipos, weights=pesos)[0]() for _ in range(self.columnas)] for _ in range(self.filas)]
+            #Fuerza entrada y salida como camino
+            self.matriz[0][0] = Camino()
+            self.matriz[self.filas-1][self.columnas-1] = Camino()
+            # Verifica si hay caminos 
+            if self.hay_camino_jugador_escape() and self.hay_camino_jugador_cazador():
+               self.colocar_enemigos(5) #Coloca enemigos 
+               break
+
+    def hay_camino_jugador_escape(self):
+        return self.bfs(lambda c: c.permite_jugador())
+
+    def hay_camino_jugador_cazador(self):
+        return self.bfs(lambda c: c.permite_enemigo())
+
+    def bfs(self, permite_func):
+        visitado = [[False] * self.columnas for _ in range(self.filas)]
+        cola = deque([self.entrada])
+        visitado[0][0] = True
+
+        while cola:
+            y, x = cola.popleft()
+            if (y, x) == self.salida:
+                return True
+            for dy, dx in [(-1,0),(1,0),(0,-1),(0,1)]:
+                ny, nx = y + dy, x + dx
+                if (0 <= ny < self.filas and 0 <= nx < self.columnas 
+                    and not visitado[ny][nx] 
+                    and permite_func(self.matriz[ny][nx])):
+                    visitado[ny][nx] = True
+                    cola.append((ny, nx))
+        return False
+
+    def colocar_enemigos(self, cantidad):
+        posiciones_validas = [(y, x) for y in range(self.filas) for x in range(self.columnas) if isinstance(self.matriz[y][x], Camino) and (y,x) not in [self.entrada, self.salida]]
+        random.shuffle(posiciones_validas) 
+        self.enemigos_pos = posiciones_validas[:cantidad]
 
 class Jugador:
    def __init__(self, nombre, modo):
@@ -50,7 +103,6 @@ class Jugador:
       self.puntaje_e = 0
       self.puntaje_c = 0
 
-   
    def direccion(self, direc):
       pass
    
@@ -75,10 +127,10 @@ class Jugador:
          self.puntaje_c = 0
       else:
          self.puntaje_e = 0
+
 """      
 class Enemigo:
-"""
-"""
+
 Ideas de allison:
 1. Hacer que cada celda de la matriz del laberinto, que cada lado de la celda sea representado con una lista. Las casillas no tienen caras  
 2. Stamina: Con cuadritos. dividir 100 en 5 cuadritos, cuando la stamina este en 100% se muestran los 5, si esta al 80% se muestran 4.
@@ -88,3 +140,21 @@ Ideas de allison:
 
 mapa1 = Mapa()
 mapa1.crear_mapa()
+simbolos = {
+        Camino: "·",
+        Lianas: "§",
+        Tuneles: "≈",
+        Muro: "|"
+    }
+
+for y in range(mapa1.filas):
+   fila = ""
+   for x in range(mapa1.columnas):
+      if (y,x) == mapa1.entrada:
+         fila += "E"
+      elif (y,x) == mapa1.salida:
+         fila += "S"
+      else:
+         fila += simbolos.get(type(mapa1.matriz[y][x]))
+   print(fila)
+print("\nEnemigos en:", mapa1.enemigos_pos)
