@@ -1,0 +1,29 @@
+{
+    "usuarios": [
+        {
+            "nombre": "Nathan",
+            "puntaje_escape": 9999,
+            "puntaje_cazador": 9999
+        },
+        {
+            "nombre": "Valeria",
+            "puntaje_escape": 9999,
+            "puntaje_cazador": 9999
+        },
+        {
+            "nombre": "Tinoco",
+            "puntaje_escape": 0,
+            "puntaje_cazador": 0
+        },
+        {
+            "nombre": "Allison",
+            "puntaje_escape": -999,
+            "puntaje_cazador": -999
+        },
+        {
+            "nombre": "Brittany",
+            "puntaje_escape": 0,
+            "puntaje_cazador": 0
+        }
+    ]
+}
